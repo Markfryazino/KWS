@@ -70,12 +70,12 @@ class StreamingCRNN(nn.Module):
 
         self.hidden_state = None
         self.frames = []
-        self.prediction = torch.ones(self.config.num_classes) / self.config.num_classes
+        self.prediction = torch.tensor([1, 0])
 
     def reset(self):
         self.hidden_state = None
         self.frames = []
-        self.prediction = torch.ones(self.config.num_classes) / self.config.num_classes
+        self.prediction = torch.tensor([1, 0])
 
     def forward(self, input):
         self.frames.append(input)
@@ -83,9 +83,13 @@ class StreamingCRNN(nn.Module):
 
             batch = torch.tensor(self.frames).unsqueeze(dim=0).to(self.config.device)
             batch = self.melspec(batch)
-            logits, self.hidden_state = self.model(batch, self.hidden_state, return_hidden=True)
-            self.prediction = F.softmax(logits, dim=-1)
+            logits, out_hidden_state = self.model(batch, self.hidden_state, return_hidden=True)
+
+            if self.config.share_hidden_states:
+                self.hidden_state = out_hidden_state
+
+            self.prediction = F.softmax(logits, dim=-1)[0]
 
             self.frames = self.frames[-(self.config.max_window_length - self.config.streaming_step_size):]
 
-        return self.prediction
+        return self.prediction.cpu()

@@ -28,6 +28,7 @@ class StreamingTaskConfig(TaskConfig):
     # max_window_length и streaming_step_size у нас будут в секундах
     max_window_length_seconds: float = 1.
     streaming_step_size_seconds: float = 0.1
+    share_hidden_states: bool = True
 
     def __post_init__(self):
         self.max_window_length = int(self.max_window_length_seconds * self.sample_rate)
