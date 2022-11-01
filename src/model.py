@@ -1,7 +1,9 @@
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 
-from src.util_classes import TaskConfig
+from src.configs import TaskConfig, StreamingTaskConfig
+from src.util_classes import LogMelspec
 
 
 class Attention(nn.Module):
@@ -21,7 +23,6 @@ class Attention(nn.Module):
         return (input * alpha).sum(dim=-2)
 
 class CRNN(nn.Module):
-
     def __init__(self, config: TaskConfig):
         super().__init__()
         self.config = config
@@ -49,10 +50,42 @@ class CRNN(nn.Module):
         self.attention = Attention(config.hidden_size)
         self.classifier = nn.Linear(config.hidden_size, config.num_classes)
     
-    def forward(self, input):
+    def forward(self, input, hidden_state=None, return_hidden=False):
         input = input.unsqueeze(dim=1)
         conv_output = self.conv(input).transpose(-1, -2)
-        gru_output, _ = self.gru(conv_output)
+        gru_output, gru_hidden = self.gru(conv_output, hidden_state)
         contex_vector = self.attention(gru_output)
         output = self.classifier(contex_vector)
+        if return_hidden:
+            return output, gru_hidden
         return output
+
+
+class StreamingCRNN(nn.Module):
+    def __init__(self, model: CRNN, config: StreamingTaskConfig):
+        super().__init__()
+        self.model = model
+        self.config = config
+        self.melspec = LogMelspec(is_train=False, config=StreamingTaskConfig)
+
+        self.hidden_state = None
+        self.frames = []
+        self.prediction = torch.ones(self.config.num_classes) / self.config.num_classes
+
+    def reset(self):
+        self.hidden_state = None
+        self.frames = []
+        self.prediction = torch.ones(self.config.num_classes) / self.config.num_classes
+
+    def forward(self, input):
+        self.frames.append(input)
+        if len(self.frames) == self.config.max_window_length:
+
+            batch = torch.tensor(self.frames).unsqueeze(dim=0).to(self.config.device)
+            batch = self.melspec(batch)
+            logits, self.hidden_state = self.model(batch, self.hidden_state, return_hidden=True)
+            self.prediction = F.softmax(logits, dim=-1)
+
+            self.frames = self.frames[-(self.config.max_window_length - self.config.streaming_step_size):]
+
+        return self.prediction

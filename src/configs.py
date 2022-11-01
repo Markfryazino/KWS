@@ -22,3 +22,13 @@ class TaskConfig:
     sample_rate: int = 16000
     device: torch.device = torch.device(
         'cuda:0' if torch.cuda.is_available() else 'cpu')
+
+@dataclasses.dataclass
+class StreamingTaskConfig(TaskConfig):
+    # max_window_length и streaming_step_size у нас будут в секундах
+    max_window_length_seconds: float = 1.
+    streaming_step_size_seconds: float = 0.1
+
+    def __post_init__(self):
+        self.max_window_length = int(self.max_window_length_seconds * self.sample_rate)
+        self.streaming_step_size = int(self.streaming_step_size_seconds * self.sample_rate)
