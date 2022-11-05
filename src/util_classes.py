@@ -273,7 +273,7 @@ def validation(model, loader, log_melspec, device):
 
     val_losses, accs, FAs, FRs = [], [], [], []
     all_probs, all_labels = [], []
-    for i, (batch, labels) in tqdm(enumerate(loader)):
+    for i, (batch, labels) in tqdm(enumerate(loader), total=len(loader)):
         batch, labels = batch.to(device), labels.to(device)
         batch = log_melspec(batch)
 

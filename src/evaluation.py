@@ -18,13 +18,13 @@ def n_parameters(model):
 
 
 def macs(model, batch):
-    return profile(model, batch)[0]
+    return profile(model, (batch,), verbose=False)[0]
 
 def get_mean_macs(model, loader, log_melspec, device):
     model.eval()
     total_macs = []
 
-    for i, (batch, _) in tqdm(enumerate(loader)):
+    for i, (batch, _) in tqdm(enumerate(loader), total=len(loader)):
         batch = batch.to(device)
         batch = log_melspec(batch)
         total_macs.append(macs(model, batch))
