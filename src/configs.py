@@ -6,6 +6,7 @@ from typing import Tuple
 
 @dataclasses.dataclass
 class TaskConfig:
+    random_state: int = 42
     keyword: str = 'sheila'
     batch_size: int = 128
     learning_rate: float = 3e-4

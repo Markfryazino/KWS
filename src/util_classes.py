@@ -1,5 +1,5 @@
 from typing import Tuple, Union, List, Callable, Optional
-from tqdm import tqdm
+from tqdm.auto import tqdm
 from itertools import islice
 import pathlib
 
@@ -265,13 +265,6 @@ def train_epoch(model, opt, loader, log_melspec, device):
         torch.nn.utils.clip_grad_norm_(model.parameters(), 5)
 
         opt.step()
-
-        # logging
-        argmax_probs = torch.argmax(probs, dim=-1)
-        FA, FR = count_FA_FR(argmax_probs, labels)
-        acc = torch.sum(argmax_probs == labels) / torch.numel(argmax_probs)
-
-    return acc
 
 
 @torch.no_grad()
