@@ -9,6 +9,7 @@ import numpy as np
 import random
 import time
 import wandb
+import dataclasses
 
 
 def set_random_seed(seed):
@@ -45,7 +46,7 @@ def train_baseline(train_loader, val_loader, melspec_train, melspec_val, config,
             project="kws",
             entity="broccoliman",
             name=name_wandb,
-            config=config,
+            config=dataclasses.asdict(config),
         )
 
     set_random_seed(config.random_state)
@@ -68,11 +69,15 @@ def train_baseline(train_loader, val_loader, melspec_train, melspec_val, config,
         else:
             wandb.log({"val_metric": metric}, step=i)
 
+    model_name = name_wandb if name_wandb is not None else "model"
+    torch.save(model.state_dict(), f"{model_name}.pt")
+
     final_metrics = evaluate_model(model, val_loader, melspec_val, config.device)
     if not log_wandb:
         print(final_metrics)
     else:
         wandb.log({f"test: {k}": v for k, v in final_metrics.items()})
+        wandb.save(f"{model_name}.pt")
 
     wandb.finish()
 
