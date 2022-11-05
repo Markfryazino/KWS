@@ -55,7 +55,7 @@ class CRNN(nn.Module):
         input = input.unsqueeze(dim=1)
         conv_output = self.conv(input).transpose(-1, -2)
         gru_output, gru_hidden = self.gru(conv_output, hidden_state)
-        contex_vector, alpha = self.attention(gru_output, return_alpha)
+        contex_vector, alpha = self.attention(gru_output)
         output = self.classifier(contex_vector)
         if return_hidden:
             return output, gru_hidden

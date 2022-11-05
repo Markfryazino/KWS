@@ -1,6 +1,7 @@
 import tempfile
 import torch
 import numpy as np
+import time
 
 from thop import profile
 from tqdm.auto import tqdm
@@ -32,7 +33,7 @@ def get_mean_macs(model, loader, log_melspec, device):
     return np.mean(total_macs)
 
 @torch.no_grad()
-def time(model, loader, log_melspec, device):
+def compute_time(model, loader, log_melspec, device):
     model.eval()
 
     total_time = 0

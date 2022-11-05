@@ -1,5 +1,5 @@
 from src.util_classes import validation, train_epoch
-from src.evaluation import memory_size, n_parameters, get_mean_macs, time
+from src.evaluation import memory_size, n_parameters, get_mean_macs, compute_time
 from src.model import CRNN
 from src.distillation import distill_epoch
 
@@ -28,7 +28,7 @@ def evaluate_model(model, loader, log_melspec, device, random_state=42):
     metric = validation(model, loader, log_melspec, device)
     final_metrics = {
         "area under FA/FR curve": metric,
-        "evaluation time (s)": time(model, loader, log_melspec, device),
+        "evaluation time (s)": compute_time(model, loader, log_melspec, device),
         "memory size (MB)": memory_size(model),
         "number of parameters": n_parameters(model),
         "MACs": get_mean_macs(model, loader, log_melspec, device),
