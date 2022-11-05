@@ -30,3 +30,18 @@ def get_mean_macs(model, loader, log_melspec, device):
         total_macs.append(macs(model, batch))
     
     return np.mean(total_macs)
+
+@torch.no_grad()
+def time(model, loader, log_melspec, device):
+    model.eval()
+
+    total_time = 0
+    for i, (batch, labels) in tqdm(enumerate(loader), total=len(loader)):
+        batch, labels = batch.to(device), labels.to(device)
+        batch = log_melspec(batch)
+
+        start_time = time.time()
+        output = model(batch)
+        total_time += time.time() - start_time
+    
+    return total_time

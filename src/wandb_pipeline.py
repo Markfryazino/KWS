@@ -1,5 +1,5 @@
 from src.util_classes import validation, train_epoch
-from src.evaluation import memory_size, n_parameters, get_mean_macs
+from src.evaluation import memory_size, n_parameters, get_mean_macs, time
 from src.model import CRNN
 from src.distillation import distill_epoch
 
@@ -9,7 +9,6 @@ from pprint import pprint
 import torch
 import numpy as np
 import random
-import time
 import wandb
 import dataclasses
 
@@ -26,11 +25,10 @@ def evaluate_model(model, loader, log_melspec, device, random_state=42):
     set_random_seed(random_state)
     model.eval()
 
-    start_time = time.time()
     metric = validation(model, loader, log_melspec, device)
     final_metrics = {
         "area under FA/FR curve": metric,
-        "evaluation time (s)": time.time() - start_time,
+        "evaluation time (s)": time(model, loader, log_melspec, device),
         "memory size (MB)": memory_size(model),
         "number of parameters": n_parameters(model),
         "MACs": get_mean_macs(model, loader, log_melspec, device),
@@ -63,6 +61,7 @@ def train_baseline(train_loader, val_loader, melspec_train, melspec_val, config,
     print("Number of trainable parameters:", n_parameters(model))
 
     for i in range(config.num_epochs):
+        print(f"EPOCH: {i}")
         train_epoch(model, optimizer, train_loader, melspec_train, config.device)
         metric = validation(model, val_loader, melspec_val, config.device)
 
@@ -106,13 +105,17 @@ def train_distillation(teacher, train_loader, val_loader, melspec_train, melspec
     print("Number of trainable parameters:", n_parameters(model))
 
     for i in range(config.num_epochs):
+        print(f"EPOCH: {i}")
         distill_epoch(model, teacher, optimizer, train_loader, melspec_train, config.device, config.distill_w)
         metric = validation(model, val_loader, melspec_val, config.device)
 
         if not log_wandb:
             print(metric)
         else:
-            wandb.log({"val_metric": metric}, step=i)
+            wandb.log({
+                "val_metric": metric,
+                "epoch": i
+            })
 
     model_name = name_wandb if name_wandb is not None else "model"
     torch.save(model.state_dict(), f"{model_name}.pt")
