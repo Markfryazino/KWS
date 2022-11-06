@@ -83,8 +83,8 @@ def train_baseline(train_loader, val_loader, melspec_train, melspec_val, config,
     return model
 
 
-def train_distillation(teacher, train_loader, val_loader, melspec_train, melspec_val, 
-                       config, log_wandb=True, name_wandb=None):
+def train_distillation(teacher, train_loader, val_loader, teacher_melspec_train,
+                       student_melspec_train, student_melspec_val, config, log_wandb=True, name_wandb=None):
     if log_wandb:
         wandb.init(
             project="kws",
@@ -106,8 +106,9 @@ def train_distillation(teacher, train_loader, val_loader, melspec_train, melspec
 
     for i in range(config.num_epochs):
         print(f"EPOCH: {i}")
-        distill_epoch(model, teacher, optimizer, train_loader, melspec_train, config.device, config.distill_w)
-        metric = validation(model, val_loader, melspec_val, config.device)
+        distill_epoch(model, teacher, optimizer, train_loader, teacher_melspec_train, student_melspec_train,
+                      config.device, config.distill_w, config.distill_attn_w)
+        metric = validation(model, val_loader, student_melspec_val, config.device)
 
         if not log_wandb:
             print(metric)
@@ -120,7 +121,7 @@ def train_distillation(teacher, train_loader, val_loader, melspec_train, melspec
     model_name = name_wandb if name_wandb is not None else "model"
     torch.save(model.state_dict(), f"{model_name}.pt")
 
-    final_metrics = evaluate_model(model, val_loader, melspec_val, config.device)
+    final_metrics = evaluate_model(model, val_loader, student_melspec_val, config.device)
     if not log_wandb:
         pprint(final_metrics)
     else:

@@ -197,9 +197,9 @@ class LogMelspec:
             self.melspec = nn.Sequential(
                 torchaudio.transforms.MelSpectrogram(
                     sample_rate=config.sample_rate,
-                    n_fft=400,
-                    win_length=400,
-                    hop_length=160,
+                    n_fft=config.melspec_n_fft,
+                    win_length=config.melspec_n_fft,
+                    hop_length=config.melspec_hop_length,
                     n_mels=config.n_mels
                 ),
                 torchaudio.transforms.FrequencyMasking(freq_mask_param=15),
@@ -210,9 +210,9 @@ class LogMelspec:
         else:
             self.melspec = torchaudio.transforms.MelSpectrogram(
                 sample_rate=config.sample_rate,
-                n_fft=400,
-                win_length=400,
-                hop_length=160,
+                n_fft=config.melspec_n_fft,
+                win_length=config.melspec_n_fft,
+                hop_length=config.melspec_hop_length,
                 n_mels=config.n_mels
             ).to(config.device)
 

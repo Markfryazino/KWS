@@ -8,13 +8,13 @@ from src.util_classes import LogMelspec
 
 class Attention(nn.Module):
 
-    def __init__(self, hidden_size: int):
+    def __init__(self, hidden_size: int, bottleneck_size: int):
         super().__init__()
 
         self.energy = nn.Sequential(
-            nn.Linear(hidden_size, hidden_size),
+            nn.Linear(hidden_size, bottleneck_size),
             nn.Tanh(),
-            nn.Linear(hidden_size, 1)
+            nn.Linear(bottleneck_size, 1)
         )
 
     def forward(self, input):
@@ -48,7 +48,7 @@ class CRNN(nn.Module):
             batch_first=True
         )
 
-        self.attention = Attention(config.hidden_size)
+        self.attention = Attention(config.hidden_size, config.bottleneck_size)
         self.classifier = nn.Linear(config.hidden_size, config.num_classes)
     
     def forward(self, input, hidden_state=None, return_hidden=False, return_alpha=False):
