@@ -7,7 +7,7 @@ from src.util_classes import count_FA_FR
 
 def distill_epoch(student, teacher, opt, loader, teacher_log_melspec, 
                   student_log_melspec, device, distill_w=1., attn_distill_w=0,
-                  log_steps=25):
+                  log_steps=25, scheduler=None):
     student.to(device)
     teacher.to(device)
 
@@ -38,16 +38,19 @@ def distill_epoch(student, teacher, opt, loader, teacher_log_melspec,
         # kl_loss = kl_criterion(student_log_probs, teacher_log_probs)
         kl_loss = F.kl_div(student_log_probs, teacher_log_probs, reduction='batchmean', log_target=True)
 
-        base_probs = torch.nn.functional.softmax(teacher_logits, dim=1)
+        base_probs = F.softmax(teacher_logits, dim=1)
         kl_loss = - torch.sum(base_probs * torch.log_softmax(student_logits, dim=1)) / base_probs.size(0)
         
         loss = cls_loss + kl_loss * distill_w
 
         if attn_distill_w > 0:
-            student_alpha = F.log_softmax(student_energy, dim=-2)
-            teacher_alpha = F.log_softmax(teacher_energy, dim=-2)
+            # student_alpha = F.log_softmax(student_energy, dim=-2)
+            # teacher_alpha = F.log_softmax(teacher_energy, dim=-2)
 
-            attn_loss = kl_criterion(student_alpha, teacher_alpha)
+            base_alpha = F.softmax(teacher_energy, dim=-2)
+            attn_loss = - torch.sum(base_alpha * torch.log_softmax(student_energy, dim=-2)) / base_alpha.size(0)
+
+            # attn_loss = kl_criterion(student_alpha, teacher_alpha)
             loss += attn_loss * attn_distill_w
 
             total_attn_loss += attn_loss.item()
@@ -62,6 +65,7 @@ def distill_epoch(student, teacher, opt, loader, teacher_log_melspec,
                 "train/kl_loss": total_kl_loss,
                 "train/attn_loss": total_attn_loss,
                 "train/loss": total_loss,
+                "train/lr": opt.param_groups[0]['lr']
             })
 
             total_cls_loss = total_kl_loss = total_attn_loss = total_loss = 0.
@@ -70,3 +74,5 @@ def distill_epoch(student, teacher, opt, loader, teacher_log_melspec,
         torch.nn.utils.clip_grad_norm_(student.parameters(), 5)
 
         opt.step()
+        if scheduler is not None:
+            scheduler.step()
