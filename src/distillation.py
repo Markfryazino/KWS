@@ -11,7 +11,7 @@ def distill_epoch(student, teacher, opt, loader, teacher_log_melspec,
     student.to(device)
     teacher.to(device)
 
-    kl_criterion = torch.nn.KLDivLoss(reduction="batchmean", log_target=True)
+    kl_criterion = torch.nn.KLDivLoss(log_target=True, reduction='batchmean')
 
     student.train()
     teacher.eval()
@@ -36,9 +36,11 @@ def distill_epoch(student, teacher, opt, loader, teacher_log_melspec,
 
         cls_loss = F.cross_entropy(student_logits, labels)
         # kl_loss = kl_criterion(student_log_probs, teacher_log_probs)
+        kl_loss = F.kl_div(student_log_probs, teacher_log_probs, reduction='batchmean', log_target=True)
 
         base_probs = torch.nn.functional.softmax(teacher_logits, dim=1)
-        kl_loss = - torch.sum(base_probs * torch.log_softmax(student_logits, dim=1)) / batch[0].size(0)
+        kl_loss = - torch.sum(base_probs * torch.log_softmax(student_logits, dim=1)) / base_probs.size(0)
+        
         loss = cls_loss + kl_loss * distill_w
 
         if attn_distill_w > 0:

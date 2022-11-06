@@ -84,7 +84,8 @@ def train_baseline(train_loader, val_loader, melspec_train, melspec_val, config,
 
 
 def train_distillation(teacher, train_loader, val_loader, teacher_melspec_train,
-                       student_melspec_train, student_melspec_val, config, log_wandb=True, name_wandb=None):
+                       student_melspec_train, student_melspec_val, config, log_wandb=True, name_wandb=None,
+                       student=None):
     if log_wandb:
         wandb.init(
             project="kws",
@@ -94,7 +95,8 @@ def train_distillation(teacher, train_loader, val_loader, teacher_melspec_train,
         )
 
     set_random_seed(config.random_state)
-    model = CRNN(config).to(config.device)
+
+    model = CRNN(config).to(config.device) if student is None else student
 
     optimizer = torch.optim.Adam(
         model.parameters(),
