@@ -36,7 +36,7 @@ if __name__ == "__main__":
         try:
             chunk = chunk_queue.get()
             chunk = chunk.view(1, -1)
-            print(f"{chunk.shape=}")
+            print(f"{chunk.shape}")
 
             with torch.inference_mode():
                 result = model(chunk)
