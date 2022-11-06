@@ -34,7 +34,7 @@ class TaskConfig:
 class DistillTaskConfig(TaskConfig):
     distill_w: float = 1.0
     attn_distill_w: float = 0.0
-    temperature = 1.0
+    temperature: float = 1.0
 
 
 @dataclasses.dataclass

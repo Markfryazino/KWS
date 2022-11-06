@@ -77,14 +77,9 @@ class StreamingCRNN(nn.Module):
         self.frames = []
         self.prediction = torch.tensor([1, 0])
 
-    def reset(self):
-        self.hidden_state = None
-        self.frames = []
-        self.prediction = torch.tensor([1, 0])
-
-    def forward(self, input):
-        self.frames.append(input)
-        if len(self.frames) == self.config.max_window_length:
+    def forward(self, input: torch.FloatTensor):
+        self.frames += input.flatten().tolist()
+        if len(self.frames) >= self.config.max_window_length:
 
             batch = torch.tensor(self.frames).unsqueeze(dim=0).to(self.config.device)
             batch = self.melspec(batch)
