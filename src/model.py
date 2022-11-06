@@ -2,6 +2,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+from typing import Union, Tuple, Optional
+
 from src.configs import TaskConfig, StreamingTaskConfig
 from src.util_classes import LogMelspec
 
@@ -51,7 +53,11 @@ class CRNN(nn.Module):
         self.attention = Attention(config.hidden_size, config.bottleneck_size)
         self.classifier = nn.Linear(config.hidden_size, config.num_classes)
     
-    def forward(self, input, hidden_state=None, return_hidden=False, return_alpha=False):
+    def forward(self, input, hidden_state: Optional[torch.Tensor] = None, return_hidden: bool =False, return_alpha: bool =False):
+        
+        if hidden_state is not None and torch.numel(hidden_state) == 0:
+            hidden_state = None
+        
         input = input.unsqueeze(dim=1)
         conv_output = self.conv(input).transpose(-1, -2)
         gru_output, gru_hidden = self.gru(conv_output, hidden_state)
@@ -63,33 +69,36 @@ class CRNN(nn.Module):
         if return_alpha:
             return output, energy
 
-        return output
+        return (output, torch.tensor(0))
 
 
 class StreamingCRNN(nn.Module):
-    def __init__(self, model: CRNN, config: StreamingTaskConfig):
+    def __init__(self, model: CRNN, max_window_length, streaming_step_size, share_hidden_states, device):
         super().__init__()
         self.model = model
-        self.config = config
+        self.max_window_length = max_window_length
+        self.streaming_step_size = streaming_step_size
+        self.share_hidden_states = share_hidden_states
+        self.device = device
         self.melspec = LogMelspec(is_train=False, config=StreamingTaskConfig)
 
-        self.hidden_state = None
-        self.frames = []
+        self.hidden_state = torch.FloatTensor([])
+        self.frames = torch.FloatTensor([])
         self.prediction = torch.tensor([1, 0])
 
     def forward(self, input: torch.FloatTensor):
-        self.frames += input.flatten().tolist()
-        if len(self.frames) >= self.config.max_window_length:
+        self.frames = torch.cat([self.frames, input.flatten()], dim=0)
+        if len(self.frames) >= self.max_window_length:
 
-            batch = torch.tensor(self.frames).unsqueeze(dim=0).to(self.config.device)
+            batch = torch.tensor(self.frames).unsqueeze(dim=0).to(self.device)
             batch = self.melspec(batch)
             logits, out_hidden_state = self.model(batch, self.hidden_state, return_hidden=True)
 
-            if self.config.share_hidden_states:
+            if self.share_hidden_states:
                 self.hidden_state = out_hidden_state
 
             self.prediction = F.softmax(logits, dim=-1)[0]
 
-            self.frames = self.frames[-(self.config.max_window_length - self.config.streaming_step_size):]
+            self.frames = self.frames[-(self.max_window_length - self.streaming_step_size):]
 
         return self.prediction.cpu()

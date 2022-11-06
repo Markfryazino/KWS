@@ -189,9 +189,10 @@ def get_train_test_dataloaders(path2dir, config):
     return train_loader, val_loader
 
 
-class LogMelspec:
+class LogMelspec(torch.nn.Module):
 
     def __init__(self, is_train, config):
+        super().__init__()
         # with augmentations
         if is_train:
             self.melspec = nn.Sequential(
@@ -216,7 +217,7 @@ class LogMelspec:
                 n_mels=config.n_mels
             ).to(config.device)
 
-    def __call__(self, batch):
+    def forward(self, batch):
         # already on device
         return torch.log(self.melspec(batch).clamp_(min=1e-9, max=1e9))
 
