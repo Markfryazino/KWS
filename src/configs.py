@@ -19,7 +19,7 @@ class TaskConfig:
     cnn_out_channels: int = 8
     kernel_size: Tuple[int, int] = (5, 20)
     stride: Tuple[int, int] = (2, 8)
-    hidden_size: int = 64
+    hidden_size: int = 32
     bottleneck_size: int = 32
     gru_num_layers: int = 2
     bidirectional: bool = False
