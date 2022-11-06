@@ -8,7 +8,10 @@ from src.util_classes import count_FA_FR
 def distill_epoch(student, teacher, opt, loader, teacher_log_melspec, 
                   student_log_melspec, device, distill_w=1., attn_distill_w=0,
                   log_steps=25):
-    kl_criterion = torch.nn.KLDivLoss(reduction="batchmean")
+    student.to(device)
+    teacher.to(device)
+
+    kl_criterion = torch.nn.KLDivLoss(reduction="batchmean", log_target=True)
 
     student.train()
     teacher.eval()
@@ -22,21 +25,26 @@ def distill_epoch(student, teacher, opt, loader, teacher_log_melspec,
 
         opt.zero_grad()
 
-        student_logits, student_alpha = student(batch_student, return_alpha=True)
+        student_logits, student_energy = student(batch_student, return_alpha=True)
 
         with torch.no_grad():
-            teacher_logits, teacher_alpha = teacher(batch_teacher, return_alpha=True)
+            teacher_logits, teacher_energy = teacher(batch_teacher, return_alpha=True)
 
         # we need probabilities so we use softmax & CE separately
-        student_probs = F.softmax(student_logits, dim=-1)
-        teacher_probs = F.softmax(teacher_logits, dim=-1)
+        student_log_probs = F.log_softmax(student_logits, dim=-1)
+        teacher_log_probs = F.softmax(teacher_logits, dim=-1)
 
         cls_loss = F.cross_entropy(student_logits, labels)
-        kl_loss = kl_criterion(student_probs, teacher_probs)
+        # kl_loss = kl_criterion(student_log_probs, teacher_log_probs)
 
+        base_probs = torch.nn.functional.softmax(teacher_logits, dim=1)
+        kl_loss = - torch.sum(base_probs * torch.log_softmax(student_logits, dim=1)) / batch[0].size(0)
         loss = cls_loss + kl_loss * distill_w
 
         if attn_distill_w > 0:
+            student_alpha = F.log_softmax(student_energy, dim=-2)
+            teacher_alpha = F.log_softmax(teacher_energy, dim=-2)
+
             attn_loss = kl_criterion(student_alpha, teacher_alpha)
             loss += attn_loss * attn_distill_w
 

@@ -104,10 +104,11 @@ def train_distillation(teacher, train_loader, val_loader, teacher_melspec_train,
 
     print("Number of trainable parameters:", n_parameters(model))
 
+    student_melspec_val.melspec.to(config.device)
     for i in range(config.num_epochs):
         print(f"EPOCH: {i}")
         distill_epoch(model, teacher, optimizer, train_loader, teacher_melspec_train, student_melspec_train,
-                      config.device, config.distill_w, config.distill_attn_w)
+                      config.device, config.distill_w, config.attn_distill_w)
         metric = validation(model, val_loader, student_melspec_val, config.device)
 
         if not log_wandb:
@@ -121,7 +122,8 @@ def train_distillation(teacher, train_loader, val_loader, teacher_melspec_train,
     model_name = name_wandb if name_wandb is not None else "model"
     torch.save(model.state_dict(), f"{model_name}.pt")
 
-    final_metrics = evaluate_model(model, val_loader, student_melspec_val, config.device)
+    student_melspec_val.melspec.cpu()
+    final_metrics = evaluate_model(model.cpu(), val_loader, student_melspec_val, "cpu")
     if not log_wandb:
         pprint(final_metrics)
     else:

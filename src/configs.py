@@ -6,9 +6,9 @@ from typing import Tuple
 
 @dataclasses.dataclass
 class TaskConfig:
-    melspec_n_fft = 400
-    melspec_win_length = 400
-    melspec_hop_length = 160
+    melspec_n_fft: int = 400
+    melspec_win_length: int = 400
+    melspec_hop_length: int = 160
     random_state: int = 42
     keyword: str = 'sheila'
     batch_size: int = 128
