@@ -6,7 +6,7 @@ from typing import Tuple
 
 @dataclasses.dataclass
 class TaskConfig:
-    use_scheduler = False
+    use_scheduler: bool = False
     melspec_n_fft: int = 400
     melspec_win_length: int = 400
     melspec_hop_length: int = 160
