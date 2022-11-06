@@ -7,7 +7,7 @@ from src.util_classes import count_FA_FR
 
 def distill_epoch(student, teacher, opt, loader, teacher_log_melspec, 
                   student_log_melspec, device, distill_w=1., attn_distill_w=0,
-                  log_steps=25, scheduler=None):
+                  log_steps=25, temperature=1., scheduler=None):
     student.to(device)
     teacher.to(device)
 
@@ -30,11 +30,16 @@ def distill_epoch(student, teacher, opt, loader, teacher_log_melspec,
         with torch.no_grad():
             teacher_logits, teacher_energy = teacher(batch_teacher, return_alpha=True)
 
+        student_logits /= temperature
+        teacher_logits /= temperature
+        student_energy /= temperature
+        teacher_energy /= temperature
+
         # we need probabilities so we use softmax & CE separately
         student_log_probs = F.log_softmax(student_logits, dim=-1)
         teacher_log_probs = F.softmax(teacher_logits, dim=-1)
 
-        cls_loss = F.cross_entropy(student_logits, labels)
+        cls_loss = F.cross_entropy(student_logits * temperature, labels)
         # kl_loss = kl_criterion(student_log_probs, teacher_log_probs)
         kl_loss = F.kl_div(student_log_probs, teacher_log_probs, reduction='batchmean', log_target=True)
 

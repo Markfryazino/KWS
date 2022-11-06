@@ -11,14 +11,23 @@ import numpy as np
 import random
 import wandb
 import dataclasses
+import os
 
 
 def set_random_seed(seed):
-    torch.backends.cudnn.deterministic = True
-    torch.manual_seed(seed)
-    torch.cuda.manual_seed(seed)
-    np.random.seed(seed)
     random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed_all(seed)
+
+    os.environ["PYTHONHASHSEED"] = str(seed)
+
+    torch.backends.deterministic = True
+    torch.backends.benchmark = False
+
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
 
 
 def evaluate_model(model, loader, log_melspec, device, random_state=42):
@@ -113,12 +122,15 @@ def train_distillation(teacher, train_loader, val_loader, teacher_melspec_train,
 
     print("Number of trainable parameters:", n_parameters(model))
 
+    model_name = name_wandb if name_wandb is not None else "model"
+
     student_melspec_val.melspec.to(config.device)
-    for i in range(config.num_epochs):
-        try:
+    try:
+        for i in range(config.num_epochs):
             print(f"EPOCH: {i}")
             distill_epoch(model, teacher, optimizer, train_loader, teacher_melspec_train, student_melspec_train,
-                        config.device, config.distill_w, config.attn_distill_w, scheduler=scheduler)
+                        config.device, config.distill_w, config.attn_distill_w, 
+                        temperature=config.temperature, scheduler=scheduler)
             metric = validation(model, val_loader, student_melspec_val, config.device)
 
             torch.save(model.state_dict(), f"{model_name}-{i}.pt")
@@ -131,10 +143,9 @@ def train_distillation(teacher, train_loader, val_loader, teacher_melspec_train,
                     "val_metric": metric,
                     "epoch": i
                 })
-        except KeyboardInterrupt:
-            print("That's all folks!")
+    except KeyboardInterrupt:
+        print("That's all folks!")
 
-    model_name = name_wandb if name_wandb is not None else "model"
     torch.save(model.state_dict(), f"{model_name}.pt")
 
     student_melspec_val.melspec.cpu()
