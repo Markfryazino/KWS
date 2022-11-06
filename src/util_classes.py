@@ -257,7 +257,7 @@ def train_epoch(model, opt, loader, log_melspec, device):
         opt.zero_grad()
 
         # run model # with autocast():
-        logits = model(batch)
+        logits = model(batch)[0]
         # we need probabilities so we use softmax & CE separately
         probs = F.softmax(logits, dim=-1)
         loss = F.cross_entropy(logits, labels)
@@ -278,7 +278,7 @@ def validation(model, loader, log_melspec, device):
         batch, labels = batch.to(device), labels.to(device)
         batch = log_melspec(batch)
 
-        output = model(batch)
+        output = model(batch)[0]
         # we need probabilities so we use softmax & CE separately
         probs = F.softmax(output, dim=-1)
         loss = F.cross_entropy(output, labels)
